@@ -13,24 +13,26 @@ import argparse
 from Nets import Generator, Discriminator
 from Datasets import *
 import pdb
+import tensorboardX
 class ImprovedGAN(object):
     def __init__(self, G, D, labeled, unlabeled, test, args):
         self.G = G
         self.D = D
-	if args.cuda:
-	    self.G.cuda()
-	    self.D.cuda()
+        self.writer = tensorboardX.SummaryWriter(log_dir='logfile')
+        if args.cuda:
+            self.G.cuda()
+            self.D.cuda()
         self.labeled = labeled
         self.unlabeled = unlabeled
         self.test = test
-        self.Doptim = optim.SGD(self.D.parameters(), lr=args.lr, momentum = args.momentum)
-        self.Goptim = optim.Adam(self.G.parameters(), lr=args.lr)
+        self.Doptim = optim.Adam(self.D.parameters(), lr=args.lr, betas= (args.momentum, 0.999))
+        self.Goptim = optim.Adam(self.G.parameters(), lr=args.lr, betas = (args.momentum,0.999))
         self.args = args
     def trainD(self, x_label, y, x_unlabel):
         x_label, x_unlabel, y = Variable(x_label), Variable(x_unlabel), Variable(y, requires_grad = False)
         if self.args.cuda:
             x_label, x_unlabel, y = x_label.cuda(), x_unlabel.cuda(), y.cuda()
-        output_label, output_unlabel, output_fake = self.D(x_label, cuda=self.args.cuda), self.D(x_unlabel, cuda=self.args.cuda), self.D(self.G(x_unlabel.size()[0], cuda = self.args.cuda).view(x_unlabel.size()), cuda=self.args.cuda)
+        output_label, output_unlabel, output_fake = self.D(x_label, cuda=self.args.cuda), self.D(x_unlabel, cuda=self.args.cuda), self.D(self.G(x_unlabel.size()[0], cuda = self.args.cuda).view(x_unlabel.size()).detach(), cuda=self.args.cuda)
         logz_label, logz_unlabel, logz_fake = log_sum_exp(output_label), log_sum_exp(output_unlabel), log_sum_exp(output_fake) # log ∑e^x_i
         prob_label = torch.gather(output_label, 1, y.unsqueeze(1)) # log e^x_label = x_label 
         loss_supervised = -torch.mean(prob_label) + torch.mean(logz_label)
@@ -40,53 +42,69 @@ class ImprovedGAN(object):
         acc = torch.mean((output_label.max(1)[1] == y).float())
         self.Doptim.zero_grad()
         loss.backward()
-	if loss != loss:
-		pdb.set_trace()
         self.Doptim.step()
         return loss_supervised.data.cpu().numpy(), loss_unsupervised.data.cpu().numpy(), acc
     
     def trainG(self, x_unlabel):
-        mom_gen = torch.mean(self.D(self.G(x_unlabel.size()[0], cuda = self.args.cuda).view(x_unlabel.size()), feature=True, cuda=self.args.cuda), dim = 0)
-        mom_unlabel = torch.mean(self.D(Variable(x_unlabel), feature=True, cuda=self.args.cuda), dim = 0)
-        loss = torch.mean((mom_gen - mom_unlabel) ** 2)
+        fake = self.G(x_unlabel.size()[0], cuda = self.args.cuda).view(x_unlabel.size())
+#        fake.retain_grad()
+        mom_gen, output_fake = self.D(fake, feature=True, cuda=self.args.cuda)
+        mom_unlabel, _ = self.D(Variable(x_unlabel), feature=True, cuda=self.args.cuda)
+        mom_gen = torch.mean(mom_gen, dim = 0)
+        mom_unlabel = torch.mean(mom_unlabel, dim = 0)
+        loss_fm = torch.mean((mom_gen - mom_unlabel) ** 2)
+        #loss_adv = -torch.mean(F.softplus(log_sum_exp(output_fake)))
+        loss = loss_fm #+ 1. * loss_adv        
         self.Goptim.zero_grad()
+        self.Doptim.zero_grad()
         loss.backward()
         self.Goptim.step()
-	a = self.G.main[0].weight != self.G.main[0].weight
-	if torch.sum(a.float()) > 0:
-		pdb.set_trace()
         return loss.data.cpu().numpy()
 
     def train(self):
         assert self.unlabeled.__len__() > self.labeled.__len__()
         assert type(self.labeled) == TensorDataset
         times = int(np.ceil(self.unlabeled.__len__() * 1. / self.labeled.__len__()))
-	t1 = self.labeled.data_tensor.clone()
-	t2 = self.labeled.target_tensor.clone()
-        #tile_labeled = TensorDataset(self.labeled.data_tensor.repeat(times, 1, 1, 1), self.labeled.target_tensor.repeat(times))
-	tile_labeled = TensorDataset(t1.repeat(times,1,1,1),t2.repeat(times))
+        t1 = self.labeled.data_tensor.clone()
+        t2 = self.labeled.target_tensor.clone()
+        tile_labeled = TensorDataset(t1.repeat(times,1,1,1),t2.repeat(times))
+        gn = 0
         for epoch in range(self.args.epochs):
             self.G.train()
             self.D.train()
-            unlabel_loader1 = DataLoader(self.unlabeled, batch_size = self.args.batch_size, shuffle=True, drop_last=True)
-            unlabel_loader2 = DataLoader(self.unlabeled, batch_size = self.args.batch_size, shuffle=True, drop_last=True).__iter__()
-            label_loader = DataLoader(tile_labeled, batch_size = self.args.batch_size, shuffle=True, drop_last=True).__iter__()
-            batch_num = loss_supervised = loss_unsupervised = loss_gen = accuracy = 0.
+            unlabel_loader1 = DataLoader(self.unlabeled, batch_size = self.args.batch_size, shuffle=True, drop_last=True, num_workers = 4)
+            unlabel_loader2 = DataLoader(self.unlabeled, batch_size = self.args.batch_size, shuffle=True, drop_last=True, num_workers = 4).__iter__()
+            label_loader = DataLoader(tile_labeled, batch_size = self.args.batch_size, shuffle=True, drop_last=True, num_workers = 4).__iter__()
+            loss_supervised = loss_unsupervised = loss_gen = accuracy = 0.
+            batch_num = 0
             for (unlabel1, _label1) in unlabel_loader1:
+#                pdb.set_trace()
                 batch_num += 1
                 unlabel2, _label2 = unlabel_loader2.next()
                 x, y = label_loader.next()
-		if args.cuda:
-		    x, y, unlabel1, unlabel2 = x.cuda(), y.cuda(), unlabel1.cuda(), unlabel2.cuda()
+                if args.cuda:
+                    x, y, unlabel1, unlabel2 = x.cuda(), y.cuda(), unlabel1.cuda(), unlabel2.cuda()
                 ll, lu, acc = self.trainD(x, y, unlabel1)
                 loss_supervised += ll
                 loss_unsupervised += lu
                 accuracy += acc
                 lg = self.trainG(unlabel2)
+                if epoch > 1 and lg > 1:
+#                    pdb.set_trace()
+                    lg = self.trainG(unlabel2)
                 loss_gen += lg
                 if (batch_num + 1) % self.args.log_interval == 0:
                     print('Training: %d / %d' % (batch_num + 1, len(unlabel_loader1)))
-	    	    print('Eval: correct %d/%d, %.4f' % (self.eval(), self.test.__len__(), acc))
+                    gn += 1
+                    self.writer.add_scalars('loss', {'loss_supervised':ll, 'loss_unsupervised':lu, 'loss_gen':lg}, gn)
+                    self.writer.add_histogram('real_feature', self.D(Variable(x, volatile = True), cuda=self.args.cuda, feature = True)[0], gn)
+                    self.writer.add_histogram('fake_feature', self.D(self.G(self.args.batch_size, cuda = self.args.cuda), cuda=self.args.cuda, feature = True)[0], gn)
+                    self.writer.add_histogram('fc3_bias', self.G.fc3.bias, gn)
+                    self.writer.add_histogram('D_feature_weight', self.D.layers[-1].weight, gn)
+#                    self.writer.add_histogram('D_feature_bias', self.D.layers[-1].bias, gn)
+                    #print('Eval: correct %d/%d, %.4f' % (self.eval(), self.test.__len__(), acc))
+                    self.D.train()
+                    self.G.train()
             loss_supervised /= batch_num
             loss_unsupervised /= batch_num
             loss_gen /= batch_num
@@ -106,16 +124,16 @@ class ImprovedGAN(object):
             d.append(datum)
             l.append(label)
         x, y = torch.stack(d), torch.LongTensor(l)
-	if self.args.cuda:
-		x, y = x.cuda(), y.cuda()
+        if self.args.cuda:
+            x, y = x.cuda(), y.cuda()
         pred = self.predict(x)
         return torch.sum(pred == y)
     def draw(self, batch_size):
-	self.G.eval()
-	return self.G(batch_size, cuda=self.args.cuda)
+        self.G.eval()
+        return self.G(batch_size, cuda=self.args.cuda)
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch Improved GAN')
-    parser.add_argument('--batch-size', type=int, default=64, metavar='N',
+    parser.add_argument('--batch-size', type=int, default=100, metavar='N',
                         help='input batch size for training (default: 64)')
     parser.add_argument('--epochs', type=int, default=10, metavar='N',
                         help='number of epochs to train (default: 10)')
@@ -131,7 +149,7 @@ if __name__ == '__main__':
                         help='how many batches to wait before logging training status')
     parser.add_argument('--eval-interval', type=int, default=1, metavar='N',
                         help='how many batches to wait before evaling training status')
-    parser.add_argument('--unlabel-weight', type=int, default=1, metavar='N',
+    parser.add_argument('--unlabel-weight', type=float, default=1, metavar='N',
                         help='scale factor between labeled and unlabeled data')
     args = parser.parse_args()
     args.cuda = args.cuda and torch.cuda.is_available()

@@ -26,17 +26,17 @@ def MnistLabel(class_num):
     return TensorDataset(torch.FloatTensor(np.array(data)), torch.LongTensor(np.array(labels)))
 
 def MnistUnlabel():
-    return datasets.MNIST('../data', train=True, download=True,
+    raw_dataset = datasets.MNIST('../data', train=True, download=True,
                    transform=transforms.Compose([
                        transforms.ToTensor(),
                        #transforms.Normalize((0.1307,), (0.3081,))
                    ]))
-
+    return raw_dataset
 def MnistTest():
     return datasets.MNIST('../data', train=False, download=True,
                    transform=transforms.Compose([
                        transforms.ToTensor(),
-                       transforms.Normalize((0.1307,), (0.3081,))
+                       #transforms.Normalize((0.1307,), (0.3081,))
                    ]))
 
 if __name__ == '__main__':
