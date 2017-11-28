@@ -8,8 +8,7 @@ Inspired by [Good Semi-supervised Learning that Requires a Bad GAN](https://arxi
 ## Running 
 The code was implemented in Python 2.7, but I think it also runs well under Python 3.
 
->
-python ImprovedGAN.py 
+`python ImprovedGAN.py` 
 
 Default configs include **CPU, saving and autoloading, generating logfile in tensorboard format, etc**. You can use `python ImprovedGAN.py --cuda` to run it on GPU.
 
@@ -17,7 +16,7 @@ The **latest** `torch`(0.4 version), `tensorboardX`, `torchvision` are needed.
 
 ## Result
 Default configs can train models achieving **98.5% accuracy** on test dataset with 100 labeled data(10 per class) and other 59,000 unlabeled data after 100 epochs.
-###Loss curve during training
+### Loss curve during training
 ![](./models/loss.png)
 `loss_label => red, loss_unlabel => blue, loss_gen => green`
  
