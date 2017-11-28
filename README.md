@@ -29,3 +29,4 @@ It must be noted that [OpenAI implementation](https://github.com/openai/improved
 * But I found it hard to reproduce expected results and suffered from exploding gradients. I changed the final layer in generator from **Sigmoid** to **Softplus**, and therefore fixed it.
 * `./models` includes the trained model, you can simply delete it for retraining.
 * The archectures of networks are elaborately designed, among them `Weight Normalization` is very important.
+* Thank Jiapeng Hong for discussing with me.
