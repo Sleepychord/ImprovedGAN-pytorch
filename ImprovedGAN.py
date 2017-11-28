@@ -14,11 +14,20 @@ from Nets import Generator, Discriminator
 from Datasets import *
 import pdb
 import tensorboardX
+import os
 class ImprovedGAN(object):
     def __init__(self, G, D, labeled, unlabeled, test, args):
-        self.G = G
-        self.D = D
-        self.writer = tensorboardX.SummaryWriter(log_dir='logfile')
+        if os.path.exists(args.savedir):
+            print('Loading model from ' + args.savedir)
+            self.G = torch.load(os.path.join(args.savedir, 'G.pkl'))
+            self.D = torch.load(os.path.join(args.savedir, 'D.pkl'))
+        else:
+            os.makedirs(args.savedir)
+            self.G = G
+            self.D = D
+            torch.save(self.G, os.path.join(args.savedir, 'G.pkl'))
+            torch.save(self.D, os.path.join(args.savedir, 'D.pkl'))
+        self.writer = tensorboardX.SummaryWriter(log_dir=args.logdir)
         if args.cuda:
             self.G.cuda()
             self.D.cuda()
@@ -113,6 +122,9 @@ class ImprovedGAN(object):
             sys.stdout.flush()
             if (epoch + 1) % self.args.eval_interval == 0:
                 print("Eval: correct %d / %d"  % (self.eval(), self.test.__len__()))
+                torch.save(self.G, os.path.join(args.savedir, 'G.pkl'))
+                torch.save(self.D, os.path.join(args.savedir, 'D.pkl'))
+                
 
     def predict(self, x):
         return torch.max(self.D(Variable(x, volatile=True), cuda=self.args.cuda), 1)[1].data
@@ -151,6 +163,8 @@ if __name__ == '__main__':
                         help='how many batches to wait before evaling training status')
     parser.add_argument('--unlabel-weight', type=float, default=1, metavar='N',
                         help='scale factor between labeled and unlabeled data')
+    parser.add_argument('--logdir', type=str, default='./logfile', metavar='LOG_PATH', help='logfile path, tensorboard format')
+    parser.add_argument('--savedir', type=str, default='./models', metavar='SAVE_PATH', help = 'saving path, pickle format')
     args = parser.parse_args()
     args.cuda = args.cuda and torch.cuda.is_available()
     np.random.seed(args.seed)
