@@ -51,7 +51,7 @@ class Adult(object):
                 pass
     def LabeledData(self, class_num):
         data = torch.Tensor(np.array(self.postive_data[:class_num] + self.negative_data[:class_num]))
-        label = torch.cat((torch.ones(class_num), torch.zeros(class_num)))
+        label = torch.cat((torch.ones(class_num).long(), torch.zeros(class_num).long()))
         return TensorDataset(data, label)
     def UnlabeledData(self, balance = True):
         pos = self.postive_data[:-2000]
@@ -59,13 +59,14 @@ class Adult(object):
         if balance:
             assert len(neg) >= len(pos)
             pos = (pos * ((len(neg)-1) // len(pos) + 1))[:len(neg)]
-        label = torch.cat((torch.ones(len(pos)), torch.zeros(len(neg))))
+        label = torch.cat((torch.ones(len(pos)).long(), torch.zeros(len(neg)).long()))
         return TensorDataset(torch.Tensor(np.array(pos + neg)), label)
     def TestData(self):
         pos = self.postive_data[-2000:]
         neg = self.negative_data[-2000:]
-        label = torch.cat((torch.ones(len(pos)), torch.zeros(len(neg))))
+        label = torch.cat((torch.ones(len(pos)).long(), torch.zeros(len(neg)).long()))
         return TensorDataset(torch.Tensor(np.array(pos + neg)), label)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch Improved GAN')
     parser.add_argument('--batch-size', type=int, default=100, metavar='N',

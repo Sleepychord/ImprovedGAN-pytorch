@@ -76,7 +76,7 @@ class ImprovedGAN(object):
         times = int(np.ceil(self.unlabeled.__len__() * 1. / self.labeled.__len__()))
         t1 = self.labeled.data_tensor.clone()
         t2 = self.labeled.target_tensor.clone()
-        tile_labeled = TensorDataset(t1.repeat(times,1,1,1),t2.repeat(times))
+        tile_labeled = TensorDataset(t1.repeat(times,*[1] * (len(t1.size()) - 1)), t2.repeat(times))
         gn = 0
         for epoch in range(self.args.epochs):
             self.G.train()
@@ -91,7 +91,7 @@ class ImprovedGAN(object):
                 batch_num += 1
                 unlabel2, _label2 = unlabel_loader2.next()
                 x, y = label_loader.next()
-                if args.cuda:
+                if self.args.cuda:
                     x, y, unlabel1, unlabel2 = x.cuda(), y.cuda(), unlabel1.cuda(), unlabel2.cuda()
                 ll, lu, acc = self.trainD(x, y, unlabel1)
                 loss_supervised += ll
