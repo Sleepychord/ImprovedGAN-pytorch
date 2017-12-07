@@ -6,12 +6,8 @@ import pdb
 def log_sum_exp(x, axis = 1):
     m = torch.max(x, dim = 1)[0]
     return m + torch.log(torch.sum(torch.exp(x - m.unsqueeze(1)), dim = axis))
-def reset_normal_param(L, stdv, weight_scale = 1.):
-    assert type(L) == torch.nn.Linear
-    torch.nn.init.normal(L.weight, std=weight_scale / math.sqrt(L.weight.size()[0]))
-    #torch.nn.init.normal(L.weight, std=stdv)
-    #L.weight.data = L.weight.data * weight_scale / torch.sqrt(torch.sum(L.weight.data ** 2, dim = 0))
-    
+def normalize_infnorm(x, eps=1e-8):
+    return x / (x.abs().max(dim = 0)[0] + 1e-8)   
 class LinearWeightNorm(torch.nn.Module):
     def __init__(self, in_features, out_features, bias=True, weight_scale=None, weight_init_stdv=0.1):
         super(LinearWeightNorm, self).__init__()
@@ -34,4 +30,4 @@ class LinearWeightNorm(torch.nn.Module):
         return self.__class__.__name__ + '(' \
             + 'in_features=' + str(self.in_features) \
             + ', out_features=' + str(self.out_features) \
-            + ', weight_scale=' + str(self.weight_scale) + ')'
+            + ', weight_scale=' + str(seldf.weight_scale) + ')'

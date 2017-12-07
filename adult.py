@@ -7,6 +7,8 @@ import argparse
 from Nets import *
 from ImprovedGAN import ImprovedGAN
 from torch.nn.functional import normalize
+from functional import normalize_infnorm
+import pdb
 class Adult(object):
     @staticmethod
     def onehot(attr_list, attr):
@@ -53,7 +55,7 @@ class Adult(object):
     def LabeledData(self, class_num):
         data = torch.Tensor(np.array(self.postive_data[:class_num] + self.negative_data[:class_num]))
         label = torch.cat((torch.ones(class_num).long(), torch.zeros(class_num).long()))
-        data = normalize(data)
+        data = normalize_infnorm(data)
         return TensorDataset(data, label)
     def UnlabeledData(self, balance = True):
         pos = self.postive_data[:-2000]
@@ -62,13 +64,13 @@ class Adult(object):
             assert len(neg) >= len(pos)
             pos = (pos * ((len(neg)-1) // len(pos) + 1))[:len(neg)]
         label = torch.cat((torch.ones(len(pos)).long(), torch.zeros(len(neg)).long()))
-        data = normalize(torch.Tensor(np.array(pos + neg)))
+        data = normalize_infnorm(torch.Tensor(np.array(pos + neg)))
         return TensorDataset(data, label)
     def TestData(self):
         pos = self.postive_data[-2000:]
         neg = self.negative_data[-2000:]
         label = torch.cat((torch.ones(len(pos)).long(), torch.zeros(len(neg)).long()))
-        data = normalize(torch.Tensor(np.array(pos + neg)))
+        data = normalize_infnorm(torch.Tensor(np.array(pos + neg)))
         return TensorDataset(data, label)
 
 if __name__ == '__main__':
@@ -97,5 +99,5 @@ if __name__ == '__main__':
     args.cuda = args.cuda and torch.cuda.is_available()
     np.random.seed(args.seed)
     a = pkl.load(open('./adult.pkl', 'r'))
-    gan = ImprovedGAN(Generator(100, output_dim = 88), Discriminator(input_dim = 88, output_dim = 2), a.LabeledData(10), a.UnlabeledData(), a.TestData(), args)
+    gan = ImprovedGAN(Generator(100, output_dim = 88), Discriminator(input_dim = 88, output_dim = 2), a.LabeledData(100), a.UnlabeledData(), a.TestData(), args)
     gan.train()

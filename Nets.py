@@ -4,7 +4,7 @@ from torch import nn
 from torch.nn import functional as F
 from torch.autograd import Variable
 import pdb
-from functional import reset_normal_param, LinearWeightNorm
+from functional import  LinearWeightNorm
 # class Discriminator(nn.Module):
 #     def __init__(self, output_units = 10):
 #         super(Discriminator, self).__init__()
@@ -36,12 +36,10 @@ class Discriminator(nn.Module):
             LinearWeightNorm(250, 250)]
         )
         self.final = LinearWeightNorm(250, output_dim, weight_scale=1)
-        #for layer in self.layers:
-        #    reset_normal_param(layer, 0.1)
-        #reset_normal_param(self.final, 0.1, 5)
     def forward(self, x, feature = False, cuda = False):
+#        pdb.set_trace()
         x = x.view(-1, self.input_dim)
-        noise = torch.randn(x.size()) * 0.3 if self.training else torch.Tensor([0])
+        noise = torch.randn(x.size()) * 0.1 if self.training else torch.Tensor([0])
         if cuda:
             noise = noise.cuda()
         x = x + Variable(noise, requires_grad = False)
