@@ -6,7 +6,6 @@ import random
 import argparse
 from Nets import *
 from ImprovedGAN import ImprovedGAN
-from torch.nn.functional import normalize
 from functional import normalize_infnorm
 import pdb
 class Adult(object):
@@ -25,7 +24,7 @@ class Adult(object):
     country_list = ['United-States','Cambodia','England','Puerto-Rico','Canada','Germany','Outlying-US(Guam-USVI-etc)','India','Japan','Greece','South','China','Cuba','Iran','Honduras','Philippines','Italy','Poland','Jamaica','Vietnam','Mexico','Portugal','Ireland','France','Dominican-Republic','Laos','Ecuador','Taiwan','Haiti','Columbia','Hungary','Guatemala','Nicaragua','Scotland','Thailand','Yugoslavia','El-Salvador','Trinadad&Tobago','Peru','Hong','Holand-Netherlands']
     def __init__(self, read_file = '../data/adult'):
         if read_file is not None:
-            self.postive_data = []
+            self.positive_data = []
             self.negative_data = []
             f = open(read_file, 'r')
             for line in f.readlines():
@@ -47,30 +46,32 @@ class Adult(object):
                 l.append(int(t[12]))
                 l.extend(Adult.onehot(Adult.country_list, t[13]))
                 if t[14] == '>50K':
-                    self.postive_data.append(l)
+                    self.positive_data.append(l)
                 else:
                     self.negative_data.append(l)
             else:
                 pass
+    def normalize(self):
+        self.positive_data = normalize_infnorm(np.array(self.positive_data))
+        self.negative_data = normalize_infnorm(np.array(self.negative_data))
     def LabeledData(self, class_num):
-        data = torch.Tensor(np.array(self.postive_data[:class_num] + self.negative_data[:class_num]))
+        data = torch.Tensor(np.concatenate((self.positive_data[:class_num], self.negative_data[:class_num])))
         label = torch.cat((torch.ones(class_num).long(), torch.zeros(class_num).long()))
-        data = normalize_infnorm(data)
         return TensorDataset(data, label)
     def UnlabeledData(self, balance = True):
-        pos = self.postive_data[:-2000]
+        pos = self.positive_data[:-2000]
         neg = self.negative_data[:-2000]
         if balance:
             assert len(neg) >= len(pos)
-            pos = (pos * ((len(neg)-1) // len(pos) + 1))[:len(neg)]
+            pos = np.tile(pos, ((len(neg)-1) // len(pos) + 1, 1))[:len(neg)]
         label = torch.cat((torch.ones(len(pos)).long(), torch.zeros(len(neg)).long()))
-        data = normalize_infnorm(torch.Tensor(np.array(pos + neg)))
+        data = torch.Tensor(np.concatenate((pos, neg)))
         return TensorDataset(data, label)
     def TestData(self):
-        pos = self.postive_data[-2000:]
+        pos = self.positive_data[-2000:]
         neg = self.negative_data[-2000:]
         label = torch.cat((torch.ones(len(pos)).long(), torch.zeros(len(neg)).long()))
-        data = normalize_infnorm(torch.Tensor(np.array(pos + neg)))
+        data = torch.Tensor(np.concatenate((pos, neg)))
         return TensorDataset(data, label)
 
 if __name__ == '__main__':
@@ -98,6 +99,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     args.cuda = args.cuda and torch.cuda.is_available()
     np.random.seed(args.seed)
-    a = pkl.load(open('./adult.pkl', 'r'))
+    a = Adult()
+    a.normalize()
     gan = ImprovedGAN(Generator(100, output_dim = 88), Discriminator(input_dim = 88, output_dim = 2), a.LabeledData(100), a.UnlabeledData(), a.TestData(), args)
     gan.train()
