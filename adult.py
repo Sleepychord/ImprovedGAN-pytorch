@@ -6,6 +6,7 @@ import random
 import argparse
 from Nets import *
 from ImprovedGAN import ImprovedGAN
+from torch.nn.functional import normalize
 class Adult(object):
     @staticmethod
     def onehot(attr_list, attr):
@@ -52,6 +53,7 @@ class Adult(object):
     def LabeledData(self, class_num):
         data = torch.Tensor(np.array(self.postive_data[:class_num] + self.negative_data[:class_num]))
         label = torch.cat((torch.ones(class_num).long(), torch.zeros(class_num).long()))
+        data = normalize(data)
         return TensorDataset(data, label)
     def UnlabeledData(self, balance = True):
         pos = self.postive_data[:-2000]
@@ -60,12 +62,14 @@ class Adult(object):
             assert len(neg) >= len(pos)
             pos = (pos * ((len(neg)-1) // len(pos) + 1))[:len(neg)]
         label = torch.cat((torch.ones(len(pos)).long(), torch.zeros(len(neg)).long()))
-        return TensorDataset(torch.Tensor(np.array(pos + neg)), label)
+        data = normalize(torch.Tensor(np.array(pos + neg)))
+        return TensorDataset(data, label)
     def TestData(self):
         pos = self.postive_data[-2000:]
         neg = self.negative_data[-2000:]
         label = torch.cat((torch.ones(len(pos)).long(), torch.zeros(len(neg)).long()))
-        return TensorDataset(torch.Tensor(np.array(pos + neg)), label)
+        data = normalize(torch.Tensor(np.array(pos + neg)))
+        return TensorDataset(data, label)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch Improved GAN')
