@@ -3,7 +3,9 @@ This is an implementation of *Semi-supervised generative adversarial network* in
 This method and its extensions have marvellous performance on traditional CV datasets, and remain state-of-art (by the end of November, 2017).
 
 ## Working Principle
-Inspired by [Good Semi-supervised Learning that Requires a Bad GAN](https://arxiv.org/abs/1705.09783.pdf), semi-supervised GAN with feature matching actually generates unrealistic fake samples around high-density region. With the inborn continuity, the **fake region** in feature space split the bounds of different classes.
+Inspired by [Good Semi-supervised Learning that Requires a Bad GAN](https://arxiv.org/abs/1705.09783), semi-supervised GAN with feature matching actually generates unrealistic fake samples around high-density region. With the inborn continuity, the **fake region** in feature space split the bounds of different classes.
+
+Refer to [Semi-supervised Learning on Graphs with Generative Adversarial Nets](https://arxiv.org/abs/1809.00130) for more details about this **density gap splitting** explaination.
 
 ## Running 
 The code was implemented in Python 2.7, but I think it also runs well under Python 3.
