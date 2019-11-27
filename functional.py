@@ -9,8 +9,6 @@ def log_sum_exp(x, axis = 1):
 def reset_normal_param(L, stdv, weight_scale = 1.):
     assert type(L) == torch.nn.Linear
     torch.nn.init.normal(L.weight, std=weight_scale / math.sqrt(L.weight.size()[0]))
-    #torch.nn.init.normal(L.weight, std=stdv)
-    #L.weight.data = L.weight.data * weight_scale / torch.sqrt(torch.sum(L.weight.data ** 2, dim = 0))
     
 class LinearWeightNorm(torch.nn.Module):
     def __init__(self, in_features, out_features, bias=True, weight_scale=None, weight_init_stdv=0.1):

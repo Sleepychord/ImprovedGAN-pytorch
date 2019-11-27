@@ -6,7 +6,6 @@ def MnistLabel(class_num):
     raw_dataset = datasets.MNIST('../data', train=True, download=True,
                    transform=transforms.Compose([
                        transforms.ToTensor(),
-                       #transforms.Normalize((0.1307,), (0.3081,))
                    ]))
     class_tot = [0] * 10
     data = []
@@ -29,15 +28,13 @@ def MnistUnlabel():
     raw_dataset = datasets.MNIST('../data', train=True, download=True,
                    transform=transforms.Compose([
                        transforms.ToTensor(),
-                       #transforms.Normalize((0.1307,), (0.3081,))
                    ]))
     return raw_dataset
 def MnistTest():
     return datasets.MNIST('../data', train=False, download=True,
                    transform=transforms.Compose([
                        transforms.ToTensor(),
-                       #transforms.Normalize((0.1307,), (0.3081,))
                    ]))
 
 if __name__ == '__main__':
-    print dir(MnistTest())
+    print(dir(MnistTest()))
