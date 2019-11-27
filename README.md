@@ -19,7 +19,7 @@ The **latest** `torch`(1.2 version), `tensorboardX`, `torchvision` are needed.
 ## Result
 Default configs can train models achieving **98.5% accuracy** on test dataset with 100 labeled data(10 per class) and other 59,000 unlabeled data after 100 epochs.
 ### Loss curve during training
-![](./models/loss.png)
+![](./loss.png)
 `loss_label => red, loss_unlabel => blue, loss_gen => green`
  
 
