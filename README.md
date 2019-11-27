@@ -8,13 +8,13 @@ Inspired by [Good Semi-supervised Learning that Requires a Bad GAN](https://arxi
 Refer to [Semi-supervised Learning on Graphs with Generative Adversarial Nets](https://arxiv.org/abs/1809.00130) for more details about this **density gap splitting** explaination.
 
 ## Running 
-The code was implemented in Python 2.7, but I think it also runs well under Python 3.
+The code was implemented in Python 3.7.
 
 `python ImprovedGAN.py` 
 
 Default configs include **CPU, saving and autoloading, generating logfile in tensorboard format, etc**. You can use `python ImprovedGAN.py --cuda` to run it on GPU.
 
-The **latest** `torch`(0.4 version), `tensorboardX`, `torchvision` are needed.
+The **latest** `torch`(1.2 version), `tensorboardX`, `torchvision` are needed.
 
 ## Result
 Default configs can train models achieving **98.5% accuracy** on test dataset with 100 labeled data(10 per class) and other 59,000 unlabeled data after 100 epochs.
@@ -31,3 +31,6 @@ It must be noted that [OpenAI implementation](https://github.com/openai/improved
 * `./models` includes the trained model, you can simply delete it for retraining.
 * The archectures of networks are elaborately designed, among them `Weight Normalization` is very important.
 * Thank Jiapeng Hong for discussing with me.
+
+## Change Logs
+* (Nov 27, 2019) Update to pytorch 1.2 and Python 3.7. The version for pytorch 0.3 and Python 2.7 can be found in the history versions. Delete pretrained models.
